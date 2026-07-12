@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>calculate</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1c1a17;
+    font-family: 'Courier New', monospace;
+  }
+
+  .calc {
+    width: 300px;
+    background: linear-gradient(160deg, #2b2723, #1f1c19);
+    border-radius: 24px;
+    padding: 22px;
+    box-shadow:
+      0 20px 40px rgba(0,0,0,0.5),
+      inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+
+  .brand {
+    color: #a8a196;
+    font-size: 12px;
+    letter-spacing: 4px;
+    text-align: left;
+    margin-bottom: 10px;
+    opacity: 0.6;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .status {
+    font-size: 10px;
+    color: #6b7a5e;
+  }
+
+  .status.loading {
+    color: #d97757;
+  }
+
+  .screen {
+    background: #cddbc4;
+    border-radius: 10px;
+    padding: 18px 16px;
+    margin-bottom: 18px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.35);
+    text-align: right;
+    overflow: hidden;
+  }
+
+  .expr {
+    color: #4c5a44;
+    font-size: 13px;
+    min-height: 16px;
+    opacity: 0.75;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .result {
+    color: #23301c;
+    font-size: 34px;
+    font-weight: bold;
+    min-height: 40px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  button {
+    border: none;
+    border-radius: 10px;
+    height: 56px;
+    font-size: 18px;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    color: #2b2723;
+    background: #e9e4da;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.25);
+    transition: transform 0.05s ease;
+  }
+
+  button:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.25);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: wait;
+  }
+
+  .op {
+    background: #d97757;
+    color: #fff5ee;
+  }
+
+  .fn {
+    background: #4c463f;
+    color: #e9e4da;
+  }
+
+  .eq {
+    background: #6b7a5e;
+    color: #f2f6ee;
+    grid-column: span 2;
+  }
+
+  .zero {
+    grid-column: span 2;
+  }
+</style>
+</head>
+<body>
+
+<div class="calc">
+  <div class="brand">
+    <span>HASIBA</span>
+    <span class="status" id="status">PHP ready</span>
+  </div>
+
+  <div class="screen">
+    <div class="expr" id="expr">&nbsp;</div>
+    <div class="result" id="result">0</div>
+  </div>
+
+  <div class="pad">
+    <button class="fn" onclick="clearAll()">C</button>
+    <button class="fn" onclick="backspace()">⌫</button>
+    <button class="fn" onclick="toggleSign()">±</button>
+    <button class="op" onclick="chooseOp('/')">÷</button>
+
+    <button onclick="pressNum('7')">7</button>
+    <button onclick="pressNum('8')">8</button>
+    <button onclick="pressNum('9')">9</button>
+    <button class="op" onclick="chooseOp('*')">×</button>
+
+    <button onclick="pressNum('4')">4</button>
+    <button onclick="pressNum('5')">5</button>
+    <button onclick="pressNum('6')">6</button>
+    <button class="op" onclick="chooseOp('-')">−</button>
+
+    <button onclick="pressNum('1')">1</button>
+    <button onclick="pressNum('2')">2</button>
+    <button onclick="pressNum('3')">3</button>
+    <button class="op" onclick="chooseOp('+')">+</button>
+
+    <button class="zero" onclick="pressNum('0')">0</button>
+    <button onclick="pressNum('.')">.</button>
+    <button class="eq" onclick="calculate()">=</button>
+  </div>
+</div>
+
+<script>
+  let current = "0";
+  let previous = null;
+  let operator = null;
+  let justCalculated = false;
+
+  const exprEl = document.getElementById('expr');
+  const resultEl = document.getElementById('result');
+  const statusEl = document.getElementById('status');
+
+  function updateScreen() {
+    resultEl.textContent = current;
+    if (previous !== null && operator !== null) {
+      exprEl.textContent = previous + ' ' + opSymbol(operator);
+    } else {
+      exprEl.textContent = '\u00A0';
+    }
+  }
+
+  function opSymbol(op) {
+    return { '+':'+', '-':'−', '*':'×', '/':'÷' }[op] || op;
+  }
+
+  function pressNum(digit) {
+    if (justCalculated) {
+      current = "0";
+      justCalculated = false;
+    }
+    if (digit === '.' && current.includes('.')) return;
+    if (current === "0" && digit !== '.') {
+      current = digit;
+    } else {
+      current += digit;
+    }
+    updateScreen();
+  }
+
+  function chooseOp(op) {
+    if (operator !== null && previous !== null && !justCalculated) {
+      calculate(() => {
+        previous = current;
+        operator = op;
+        current = "0";
+        updateScreen();
+      });
+      return;
+    }
+    previous = current;
+    operator = op;
+    current = "0";
+    justCalculated = false;
+    updateScreen();
+  }
+
+  // kanb3tho data l calculate.php b fetch(), o PHP howa li kay7seb, kayrod liina JSON
+  
+  function calculate(afterCallback) {
+    if (operator === null || previous === null) return;
+
+    statusEl.textContent = "PHP kayhseb...";
+    statusEl.classList.add('loading');
+
+    const formData = new FormData();
+    formData.append('num1', previous);
+    formData.append('num2', current);
+    formData.append('operator', operator);
+
+    fetch('calculate.php', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      statusEl.textContent = "PHP ready";
+      statusEl.classList.remove('loading');
+
+      if (!data.success) {
+        exprEl.textContent = previous + ' ' + opSymbol(operator) + ' ' + current;
+        resultEl.textContent = data.error;
+        previous = null;
+        operator = null;
+        current = "0";
+        justCalculated = true;
+        return;
+      }
+
+      exprEl.textContent = previous + ' ' + opSymbol(operator) + ' ' + current + ' =';
+      current = String(data.result);
+      resultEl.textContent = current;
+      previous = null;
+      operator = null;
+      justCalculated = true;
+
+      if (afterCallback) afterCallback();
+    })
+    .catch(err => {
+      statusEl.textContent = "Khtaa f connexion";
+      statusEl.classList.remove('loading');
+      resultEl.textContent = "Error: ma qderch nawsel l server";
+      console.error(err);
+    });
+  }
+
+  function clearAll() {
+    current = "0";
+    previous = null;
+    operator = null;
+    justCalculated = false;
+    updateScreen();
+  }
+
+  function backspace() {
+    if (justCalculated) { clearAll(); return; }
+    current = current.length > 1 ? current.slice(0, -1) : "0";
+    updateScreen();
+  }
+
+  function toggleSign() {
+    if (current === "0") return;
+    current = current.startsWith('-') ? current.slice(1) : '-' + current;
+    updateScreen();
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key >= '0' && e.key <= '9') pressNum(e.key);
+    else if (e.key === '.') pressNum('.');
+    else if (['+','-','*','/'].includes(e.key)) chooseOp(e.key);
+    else if (e.key === 'Enter' || e.key === '=') calculate();
+    else if (e.key === 'Backspace') backspace();
+    else if (e.key === 'Escape') clearAll();
+  });
+</script>
+
+</body>
+</html>
